@@ -108,12 +108,14 @@ HaloStats.prototype.parseMatchBatch = function(matchData,playerTag) {
 		}
 		this.addMatch(matchData.Results[i],playerTag);
 
-		this.threads++;
-		this.h5.metadata.gameVariantById(matchData.Results[i].GameVariant.ResourceId)
-		    .then(function (gameVariant) {
-		        this.swatVariants[gameVariant.id] = gameVariant.name;
-		        this.threads--;
-		    }.bind(this));
+		if(!this.gameVariant[matchData.Results[i].GameVariant.ResourceId]) {
+			this.threads++;
+			this.h5.metadata.gameVariantById(matchData.Results[i].GameVariant.ResourceId)
+			    .then(function (gameVariant) {
+			        this.swatVariants[gameVariant.id] = gameVariant.name;
+			        this.threads--;
+			    }.bind(this));	
+		}
 	}
 	this.threads--;
 	if(!syncDone) {

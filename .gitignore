@@ -1,7 +1,1 @@
-*.sh
-/node_modules/
-/coverage/
-/docs/
-*.rdb
-**.log
-.idea
+node_modules

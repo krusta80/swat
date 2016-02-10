@@ -108,7 +108,7 @@ HaloStats.prototype.parseMatchBatch = function(matchData,playerTag) {
 		}
 		this.addMatch(matchData.Results[i],playerTag);
 
-		if(!this.gameVariant[matchData.Results[i].GameVariant.ResourceId]) {
+		if(!this.swatVariants[matchData.Results[i].GameVariant.ResourceId]) {
 			this.threads++;
 			this.h5.metadata.gameVariantById(matchData.Results[i].GameVariant.ResourceId)
 			    .then(function (gameVariant) {

@@ -37,7 +37,7 @@ var HaloStats = function() {
 };
 
 HaloStats.prototype.syncAllMatches = function() {
-	//this.writeJSONWhenReady(3600);
+	this.writeJSONWhenReady(3600);
 	for(var p in this.playerTags) {
 		if(this.players[this.playerTags[p]].syncSpot == -1) this.syncMatches(this.playerTags[p]);	
 	}
@@ -108,7 +108,7 @@ HaloStats.prototype.parseMatchBatch = function(matchData,playerTag) {
 		}
 		this.addMatch(matchData.Results[i],playerTag);
 
-		if(!this.gameVariant[matchData.Results[i].GameVariant.ResourceId]) {
+		if(!this.swatVariants[matchData.Results[i].GameVariant.ResourceId]) {
 			this.threads++;
 			this.h5.metadata.gameVariantById(matchData.Results[i].GameVariant.ResourceId)
 			    .then(function (gameVariant) {

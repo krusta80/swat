@@ -5,6 +5,7 @@ var app = express(); // creates an instance of an express application
 var bodyParser = require('body-parser');
 var routes = require('./routes/');	
 var socketio = require('socket.io');
+var halo = require('./halo');
 
 var port = 3000;
 var indexView = "";

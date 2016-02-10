@@ -1,18 +1,18 @@
 var express = require('express');
-var tweetBank = require('../tweetBank');
+var halo = require('../halo');
 
 module.exports = function (io) {
 	var router = express.Router();
 	// could use one line instead: var router = require('express').Router();
 	
 	router.get('/', function (req, res) {
-	  var tweets = tweetBank.list();
-	  res.render( 'index', { title: 'Twitter.js', tweets: tweets, showForm: true } );
+	  var players = halo.players;
+	  res.render( 'index', { thisPlayer: players["ILikeBlakGuys"], title: 'Halo SWAT Analyzer', players: players, showForm: false } );
 	});
 
 	router.get('/users/:name', function (req, res) {
-	  var tweets = tweetBank.find({name : req.params.name});
-	  res.render( 'index', { name: req.params.name, title: 'Twitter.js - Posts by ' + req.params.name, tweets: tweets, showForm: true } );
+	  var players = halo.players;
+	  res.render( 'index', { thisPlayer: players[req.params.name], title: 'Halo SWAT Analyzer - ' + req.params.name, players: players, showForm: false } );
 	});
 
 	router.get('/tweets/:tweetID', function (req, res) {

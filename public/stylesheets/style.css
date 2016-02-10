@@ -42,14 +42,14 @@ code {
 }
 
 .tweetbox {
-  padding: 7px;
+  padding: 11px;
 }
 
 .tweetbox img {
   float: left;
   height: 48px;
   width: 48px;
-  content:url("http://lorempixel.com/48/48");
+  background-color: #000000;
 }
 .content {
   margin-left: 60px;

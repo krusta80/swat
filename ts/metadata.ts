@@ -163,6 +163,13 @@ class Metadata implements IMetadata {
         return this.api.getJSON<Weapons>(
             `/metadata/${this.title}/metadata/weapons`);
     }
+
+    /** @inheritdoc */
+    @schema("metadata")
+    seasons(): Promise<Seasons> {
+        return this.api.getJSON<Seasons>(
+            `/metadata/${this.title}/metadata/seasons`);
+    }
 };
 
 export = Metadata;

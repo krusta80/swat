@@ -1,16 +1,20 @@
 var HaloStats = function() {
+	this.https = require('https');
 	this.util = require('util');
 	this.fs = require("fs");
+	this.apiKey = '61feef943ae34573aaedac21defa3ced';
+	this.h5 = new (require("haloapi"))(this.apiKey);
+	
 	this.swatID = "2323b76a-db98-4e03-aa37-e171cfbdd1a4";
 	this.swatVariants = {
 							"0991c821-5e05-47a9-a5ae-70fdab11f9d0" : "SWAT",
 							"e4680d6f-2980-4f4a-9f95-c6a52f54cfd4" : "SWATnums"
 						};
-	
-	this.h5 = new (require("haloapi"))('61feef943ae34573aaedac21defa3ced');
+	this.seasonNames = {career : "CAREER"}; this.usedSeasons = {career : "career"};
+	this.getSeasons();
 	this.secondsSinceLastWrite = 0;
 	this.threads = 0;
-	this.playerTags = ["Thor1330","ILikeBlakGuys","PicturMeRollin2","NDmajor"];
+	this.playerTags = ["Thor1330","ILikeBlakGuys","PicturMeRollin2","ndmajor"];
 	this.players = {};
 	for(var i = 0; i < this.playerTags.length; i++) {
 		this.players[this.playerTags[i]] = {tag : this.playerTags[i], matches : {}, syncSpot : -1};
@@ -27,19 +31,15 @@ var HaloStats = function() {
 	setInterval(this.syncAllMatches.bind(this),5000);
 	//setInterval(function(){if(this.threads == 0) {console.log(this.util.inspect(this.players,false,null)); process.exit();}}.bind(this),100);
 	//this.h5.metadata.csrDesignations().then(console.log);
-	
-	
-/**
-	this.h5.stats.serviceRecordArena("Thor1330").then(function(data) {
-		console.log(this.util.inspect(data, false, null));
-	}.bind(this));
-*/
 };
 
 HaloStats.prototype.syncAllMatches = function() {
 	this.writeJSONWhenReady(3600);
 	for(var p in this.playerTags) {
-		if(this.players[this.playerTags[p]].syncSpot == -1) this.syncMatches(this.playerTags[p]);	
+		if(this.players[this.playerTags[p]].syncSpot == -1) {
+			this.updatePlayerStats(this.playerTags[p]);
+			this.syncMatches(this.playerTags[p]);	
+		}
 	}
 	this.secondsSinceLastWrite += 5;
 }
@@ -60,9 +60,63 @@ HaloStats.prototype.writeJSONWhenReady = function(threshHold) {
 }
 
 HaloStats.prototype.loadJSONFiles = function() {
-		console.log("Loading objects from hard drive...");
-		this.players = JSON.parse(this.fs.readFileSync('./players.json', 'utf8'));
-		this.variants = JSON.parse(this.fs.readFileSync('./variants.json', 'utf8'));
+	console.log("Loading objects from hard drive...");
+	this.players = JSON.parse(this.fs.readFileSync('./players.json', 'utf8'));
+	this.swatVariants = JSON.parse(this.fs.readFileSync('./variants.json', 'utf8'));
+}
+
+HaloStats.prototype.updatePlayerStats = function(playerTag) {
+	this.resetPlayerStats(playerTag);
+	for(var m in this.players[playerTag].matches) {
+		this.addMatchToPlayerStats(playerTag,this.players[playerTag].matches[m]);
+	}
+	this.performCalculations(playerTag);
+}
+
+HaloStats.prototype.performCalculations = function(playerTag) {
+	for(var s in this.players[playerTag].stats) {
+		for(var i in this.players[playerTag].stats[s]) {
+			this.players[playerTag].stats[s][i].KD = parseFloat(this.players[playerTag].stats[s][i].Kills/this.players[playerTag].stats[s][i].Deaths).toFixed(2);
+		}
+	}
+}
+
+HaloStats.prototype.addMatchToPlayerStats = function(playerTag,match) {
+	this.addMatchToPlayerBySeason(playerTag,match,"career");
+	this.usedSeasons[match.SeasonId] = match.SeasonId;
+	this.addMatchToPlayerBySeason(playerTag,match,match.SeasonId);
+}
+
+HaloStats.prototype.addMatchToPlayerBySeason = function(playerTag,match,season) {
+	this.initializePlayerStats(playerTag,season);
+	var matchVariant = this.swatVariants[match.GameVariantId].toLowerCase();
+
+	if(matchVariant.indexOf('swat') == 0) {
+		this.players[playerTag].stats[season].total.Games++;
+		this.players[playerTag].stats[season].total.Kills += match.TotalKills;
+		this.players[playerTag].stats[season].total.Deaths += match.TotalDeaths;
+		this.players[playerTag].stats[season].total.Assists += match.TotalAssists;
+		this.players[playerTag].stats[season][matchVariant].Games++;
+		this.players[playerTag].stats[season][matchVariant].Kills += match.TotalKills;
+		this.players[playerTag].stats[season][matchVariant].Deaths += match.TotalDeaths;
+		this.players[playerTag].stats[season][matchVariant].Assists += match.TotalAssists;
+	}
+}
+
+HaloStats.prototype.initializePlayerStats = function(playerTag,season) {
+	//console.log("season is "+this.seasons[season]);
+	if(!this.players[playerTag].stats) this.players[playerTag].stats = {};
+	if(!this.players[playerTag].stats[season]) {
+		this.players[playerTag].stats[season] =  {
+													total:{Games:0,Kills:0,Deaths:0,Assists:0},
+													swat:{Games:0,Kills:0,Deaths:0,Assists:0},
+													swatnums:{Games:0,Kills:0,Deaths:0,Assists:0}
+												 };
+	}
+}
+
+HaloStats.prototype.resetPlayerStats = function(playerTag) {
+	delete this.players[playerTag].stats; 
 }
 
 HaloStats.prototype.syncMatches = function(playerTag) {
@@ -129,31 +183,103 @@ HaloStats.prototype.parseMatchBatch = function(matchData,playerTag) {
 
 HaloStats.prototype.hasMatch = function(match,playerTag) {
 	var player = match.Players[0];
-	return !!this.players[playerTag].matches[match.Id.MatchId];
+	return this.players[playerTag].matches[match.Id.MatchId] && this.players[playerTag].matches[match.Id.MatchId].HopperId;
 }
 
 HaloStats.prototype.addMatch = function(match,playerTag) {
 	var player = match.Players[0];
-	this.players[playerTag].matches[match.Id.MatchId] = {
-		MatchId : match.Id.MatchId,
-		SeasonId : match.SeasonId,
-		HopperId : match.HopperId,
-		MapId : match.MapId,
-		GameVariantId : match.GameVariant.ResourceId,
-		MatchDuration : match.MatchDuration,
-		MatchCompletedDate : match.MatchCompletedDate.ISO8601Date,
-		Teams : {},
-		TeamId : player.TeamId,
-		Rank : player.Rank,
-		Result : player.Result,
-		TotalKills : player.TotalKills,
-		TotalDeaths : player.TotalDeaths,
-		TotalAssists : player.TotalAssists
-	};	
+	if(!this.players[playerTag].matches[match.Id.MatchId]) {
+		this.players[playerTag].matches[match.Id.MatchId] = {};
+	}
+	this.players[playerTag].matches[match.Id.MatchId].MatchId = match.Id.MatchId;
+	this.players[playerTag].matches[match.Id.MatchId].SeasonId = match.SeasonId;
+	this.players[playerTag].matches[match.Id.MatchId].HopperId = match.HopperId;
+	this.players[playerTag].matches[match.Id.MatchId].MapId = match.MapId;
+	this.players[playerTag].matches[match.Id.MatchId].GameVariantId = match.GameVariant.ResourceId;
+	this.players[playerTag].matches[match.Id.MatchId].MatchDuration = match.MatchDuration;
+	this.players[playerTag].matches[match.Id.MatchId].MatchCompletedDate = match.MatchCompletedDate.ISO8601Date;
+	this.players[playerTag].matches[match.Id.MatchId].Teams = {};
+	this.players[playerTag].matches[match.Id.MatchId].TeamId = player.TeamId;
+	this.players[playerTag].matches[match.Id.MatchId].Rank = player.Rank;
+	this.players[playerTag].matches[match.Id.MatchId].Result = player.Result;
+	this.players[playerTag].matches[match.Id.MatchId].TotalKills = player.TotalKills;
+	this.players[playerTag].matches[match.Id.MatchId].TotalDeaths = player.TotalDeaths;
+	this.players[playerTag].matches[match.Id.MatchId].TotalAssists = player.TotalAssists;
+	
 	for(var t in match.Teams) {
 		this.players[playerTag].matches[match.Id.MatchId].Teams[match.Teams[t].Id] = match.Teams[t].Score;
 	}
-	//console.log(match.Id.MatchId);
+	if(!this.players[playerTag].matches[match.Id.MatchId].TotalXP) {
+		this.addCarnageDetails(match.Id.MatchId);	
+	}
+}
+
+HaloStats.prototype.addCarnageDetails = function(matchId) {
+	this.h5.stats.arenaMatchById(matchId)
+    .then(function (match) {
+        this.parseCarnageDetails(match,matchId);
+    }.bind(this))
+    .catch(function(error) {
+    	console.log(error);
+    });
+}
+
+HaloStats.prototype.parseCarnageDetails = function(match,matchId) {
+	for(var p in match.PlayerStats) {
+		var player = match.PlayerStats[p];
+		var playerTag = player.Player.Gamertag;
+		if(this.players[playerTag]) {
+			if(!this.players[playerTag].matches[matchId]) {
+				this.players[playerTag].matches[matchId] = {};
+			}
+			
+			var XPFields = ["PrevSpartanRank", "SpartanRank", "PrevTotalXP", "TotalXP", 
+							"PlayerTimePerformanceXPAward", "PerformanceXP", "PerformanceRankXPAward"];
+			for(var i in XPFields) {
+				this.players[playerTag].matches[matchId][XPFields[i]] = player.XpInfo[XPFields[i]];	
+			}
+			this.players[playerTag].matches[matchId].PreviousCsr = player.PreviousCsr;
+			this.players[playerTag].matches[matchId].CurrentCsr = player.CurrentCsr;
+			this.players[playerTag].matches[matchId].MeasurementMatchesLeft = player.MeasurementMatchesLeft;
+			var killFields = ["TotalHeadshots", "TotalShotsFired", "TotalShotsLanded", "TotalMeleeKills", 
+							  "TotalAssassinations", "TotalGroundPoundKills", "TotalShoulderBashKills"];
+			for(var i in killFields) {
+				this.players[playerTag].matches[matchId][killFields[i]] = player[killFields[i]];		
+			}
+			this.players[playerTag].matches[matchId].Medals = {};
+			for(var i in player.MedalAwards) {
+				this.players[playerTag].matches[matchId].Medals[player.MedalAwards[i].MedalId] = player.MedalAwards[i].Count;
+			}
+		}
+	}
+}
+
+HaloStats.prototype.getSeasons = function() {
+	
+	var options = {
+  		host: 'www.haloapi.com',
+  		path: '/metadata/h5/metadata/seasons',
+  		headers: {'Ocp-Apim-Subscription-Key': this.apiKey}
+		};
+
+	var callback = function(response) {
+	  var str = '';
+
+	  //another chunk of data has been recieved, so append it to `str`
+	  response.on('data', function (chunk) {
+	    str += chunk;
+	  });
+
+	  //the whole response has been recieved, so we just print it out here
+	  response.on('end', function () {
+	    var seasonJSON = JSON.parse(str, 'utf8');
+	    for(var i in seasonJSON) {
+	    	this.seasonNames[seasonJSON[i].id] = seasonJSON[i].name;
+	    }
+	  }.bind(this));
+	};
+	
+	var client = this.https.request(options, callback.bind(this)).end();
 }
 
 HaloStats.prototype.getPlayerURLs = function(URLFuncs) {

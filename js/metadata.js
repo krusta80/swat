@@ -107,7 +107,11 @@ var Metadata = (function () {
     };
     /** @inheritdoc */
     Metadata.prototype.weapons = function () {
-        return this.api.getJSON("/metadata/" + this.title + "/metadata/weapons");
+        return this.api.getJSON("/metadata/" + this.title + "/metadata/seasons");
+    };
+    /** @inheritdoc */
+    Metadata.prototype.seasons = function () {
+        return this.api.getJSON("/metadata/" + this.title + "/metadata/seasons");
     };
     __decorate([
         schema("metadata")
@@ -166,6 +170,9 @@ var Metadata = (function () {
     __decorate([
         schema("metadata")
     ], Metadata.prototype, "weapons", null);
+    __decorate([
+        schema("metadata")
+    ], Metadata.prototype, "seasons", null);
     return Metadata;
 })();
 ;

@@ -7,9 +7,44 @@
   </div>
   <div class="row">
     <div class="col-md-3">
-      <img src="{{thisPlayer.avatar}}"><br>
-      <b>{{thisPlayer.tag}}</b><br>
-      <!--100 followers-->
+      <img src="{{avatar}}"><br>
+      <b>{{tag}}</b>
+	  <select onchange="window.location.replace(window.location.protocol+'//'+window.location.host+'/users/{{tag}}/'+this.options[this.selectedIndex].value)">
+	      {% for season in seasons %}
+			<option value="{{season}}" {{thisSeason[season]}}>{{seasonNames[season]}}</option>
+	      {% endfor %}
+      </select>
+      <br>
+      
+      <table cellpadding="5">
+	      <tr>
+	      	<td></td><td>Games</td><td>Kills</td><td>Deaths</td><td>Assists</td><td>K/D</td>
+	      </tr>
+		  <tr>
+	      	<td>SWAT</td>
+	      	<td align=right>{{swat.Games}}</td>
+	      	<td align=right>{{swat.Kills}}</td>
+	      	<td align=right>{{swat.Deaths}}</td>
+	      	<td align=right>{{swat.Assists}}</td>
+	      	<td align=right>{{swat.KD}}</td>
+	      </tr>
+		  <tr>
+	      	<td>SWATnums</td>
+	      	<td align=right>{{swatnums.Games}}</td>
+	      	<td align=right>{{swatnums.Kills}}</td>
+	      	<td align=right>{{swatnums.Deaths}}</td>
+	      	<td align=right>{{swatnums.Assists}}</td>
+	      	<td align=right>{{swatnums.KD}}</td>
+	      </tr>
+		  <tr>
+	      	<td>TOTAL</td>
+	      	<td align=right>{{total.Games}}</td>
+	      	<td align=right>{{total.Kills}}</td>
+	      	<td align=right>{{total.Deaths}}</td>
+	      	<td align=right>{{total.Assists}}</td>
+	      	<td align=right>{{total.KD}}</td>
+	      </tr>
+	</table>
     </div>
     <div class="col-md-9">
 		    {% if showForm %}

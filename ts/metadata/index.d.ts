@@ -18,6 +18,7 @@
 /// <reference path="./TeamColors.d.ts"/>
 /// <reference path="./Vehicles.d.ts"/>
 /// <reference path="./Weapons.d.ts"/>
+/// <reference path="./Seasons.d.ts"/>
 
 interface IMetadata {
     
@@ -144,5 +145,11 @@ interface IMetadata {
      * @endpoint https://www.haloapi.com/metadata/{title}/metadata/weapons
      */
     weapons(): Promise<Weapons>;
+
+    /**
+     * @api Metadata :: Seasons
+     * @endpoint https://www.haloapi.com/metadata/{title}/metadata/seasons
+     */
+    seasons(): Promise<Seasons>;
 }
 

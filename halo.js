@@ -4,23 +4,51 @@ var HaloStats = function() {
 	this.fs = require("fs");
 	this.apiKey = '61feef943ae34573aaedac21defa3ced';
 	this.h5 = new (require("haloapi"))(this.apiKey);
+	this.io = null;
 	
 	this.swatID = "2323b76a-db98-4e03-aa37-e171cfbdd1a4";
 	this.swatVariants = {
 							"0991c821-5e05-47a9-a5ae-70fdab11f9d0" : "SWAT",
 							"e4680d6f-2980-4f4a-9f95-c6a52f54cfd4" : "SWATnums"
 						};
-	this.seasonNames = {career : "CAREER"}; this.usedSeasons = {career : "career"};
-	this.getSeasons();
+	this.seasonNames = {career : "CAREER"}; 
 	this.secondsSinceLastWrite = 0;
 	this.threads = 0;
+
+	this.stats = {
+						Games: {field: "Games", label: "Games"},
+						Kills: {field: "Kills", label: "Kills"},
+						Deaths: {field: "Deaths", label: "Deaths"},
+						Assists: {field: "Assists", label: "Assists"},
+						KD: {field: "KD", label: "K/D"},
+						KPG: {field: "KPG", label: "KPG"},
+						Headshots: {field: "Headshots", label: "Headshots"},
+						HsPG: {field: "HsPG", label: "HS per Game"},
+						HsPer: {field: "HsPer", label: "HS %"},
+						Wins: {field: "Wins", label: "Wins"},
+						Losses: {field: "Losses", label: "Losses"},
+						WinPer: {field: "WinPer", label: "Win %"}
+				 };
+
 	this.playerTags = ["Thor1330","ILikeBlakGuys","PicturMeRollin2","ndmajor"];
 	this.players = {};
 	for(var i = 0; i < this.playerTags.length; i++) {
-		this.players[this.playerTags[i]] = {tag : this.playerTags[i], matches : {}, syncSpot : -1};
+		this.players[this.playerTags[i]] = {tag : this.playerTags[i], matches : {}, syncSpot : -1, usedSeasons: {career: "career"}};	
+	}
+	setInterval(this.getSeasons.bind(this),5000);
+	
+	try {
+		this.loadJSONFiles();	
+	}
+	catch (error){
+		console.log("Problem reading file(s)");
 	}
 	
-	this.loadJSONFiles();
+	for(var i = 0; i < this.playerTags.length; i++) {
+		this.players[this.playerTags[i]].usedSeasons = {career: "career"};	
+		this.players[this.playerTags[i]].statQueue = [];	
+		this.players[this.playerTags[i]].ioQueue = [];	
+	}
 
 	this.URLFuncs = {
 						emblem : this.h5.profile.emblemImage,
@@ -34,7 +62,7 @@ var HaloStats = function() {
 };
 
 HaloStats.prototype.syncAllMatches = function() {
-	this.writeJSONWhenReady(3600);
+	//this.writeJSONWhenReady(3600);
 	for(var p in this.playerTags) {
 		if(this.players[this.playerTags[p]].syncSpot == -1) {
 			this.updatePlayerStats(this.playerTags[p]);
@@ -77,29 +105,55 @@ HaloStats.prototype.performCalculations = function(playerTag) {
 	for(var s in this.players[playerTag].stats) {
 		for(var i in this.players[playerTag].stats[s]) {
 			this.players[playerTag].stats[s][i].KD = parseFloat(this.players[playerTag].stats[s][i].Kills/this.players[playerTag].stats[s][i].Deaths).toFixed(2);
+			this.players[playerTag].stats[s][i].KPG = parseFloat(this.players[playerTag].stats[s][i].Kills/this.players[playerTag].stats[s][i].Games).toFixed(2);
+			this.players[playerTag].stats[s][i].HsPG = parseFloat(this.players[playerTag].stats[s][i].Headshots/this.players[playerTag].stats[s][i].Games).toFixed(2);
+			this.players[playerTag].stats[s][i].HsPer = parseFloat(this.players[playerTag].stats[s][i].Headshots/this.players[playerTag].stats[s][i].Kills*100).toFixed(2);
+			this.players[playerTag].stats[s][i].WinPer = parseFloat(this.players[playerTag].stats[s][i].Wins/this.players[playerTag].stats[s][i].Games*100).toFixed(2);
 		}
 	}
 }
 
 HaloStats.prototype.addMatchToPlayerStats = function(playerTag,match) {
 	this.addMatchToPlayerBySeason(playerTag,match,"career");
-	this.usedSeasons[match.SeasonId] = match.SeasonId;
+	this.players[playerTag].usedSeasons[match.SeasonId] = match.SeasonId;
 	this.addMatchToPlayerBySeason(playerTag,match,match.SeasonId);
+	
+	if(this.players[playerTag].ioQueue.length > 0) {
+		this.players[playerTag].ioQueue.shift();
+		if(this.io) this.io.sockets.emit('match_update', {[playerTag]: this.players[playerTag].stats});
+	}
+
+	if(this.players[playerTag].statQueue.length > 0) {
+		this.players[playerTag].ioQueue.push(this.players[playerTag].statQueue.shift());	
+	}	
 }
 
 HaloStats.prototype.addMatchToPlayerBySeason = function(playerTag,match,season) {
 	this.initializePlayerStats(playerTag,season);
+	if(!this.swatVariants[match.GameVariantId]) return;
 	var matchVariant = this.swatVariants[match.GameVariantId].toLowerCase();
 
 	if(matchVariant.indexOf('swat') == 0) {
+		var wins = [0,0,0,1];
+		var losses = [0,1,0,0];
 		this.players[playerTag].stats[season].total.Games++;
 		this.players[playerTag].stats[season].total.Kills += match.TotalKills;
 		this.players[playerTag].stats[season].total.Deaths += match.TotalDeaths;
 		this.players[playerTag].stats[season].total.Assists += match.TotalAssists;
+		this.players[playerTag].stats[season].total.Wins += wins[match.Result];
+		this.players[playerTag].stats[season].total.Losses += losses[match.Result];
+		this.players[playerTag].stats[season].total.Headshots += match.TotalHeadshots;
+		this.players[playerTag].stats[season].total.TotalShots += match.TotalShotsFired;
+		this.players[playerTag].stats[season].total.TotalLanded += match.TotalShotsLanded;
 		this.players[playerTag].stats[season][matchVariant].Games++;
 		this.players[playerTag].stats[season][matchVariant].Kills += match.TotalKills;
 		this.players[playerTag].stats[season][matchVariant].Deaths += match.TotalDeaths;
 		this.players[playerTag].stats[season][matchVariant].Assists += match.TotalAssists;
+		this.players[playerTag].stats[season][matchVariant].Wins += wins[match.Result];
+		this.players[playerTag].stats[season][matchVariant].Losses += losses[match.Result];
+		this.players[playerTag].stats[season][matchVariant].Headshots += match.TotalHeadshots;
+		this.players[playerTag].stats[season][matchVariant].TotalShots += match.TotalShotsFired;
+		this.players[playerTag].stats[season][matchVariant].TotalLanded += match.TotalShotsLanded;
 	}
 }
 
@@ -108,9 +162,9 @@ HaloStats.prototype.initializePlayerStats = function(playerTag,season) {
 	if(!this.players[playerTag].stats) this.players[playerTag].stats = {};
 	if(!this.players[playerTag].stats[season]) {
 		this.players[playerTag].stats[season] =  {
-													total:{Games:0,Kills:0,Deaths:0,Assists:0},
-													swat:{Games:0,Kills:0,Deaths:0,Assists:0},
-													swatnums:{Games:0,Kills:0,Deaths:0,Assists:0}
+													total:{Games:0,Kills:0,Deaths:0,Assists:0,Wins:0,Losses:0,Headshots:0,TotalShots:0,TotalLanded:0},
+													swat:{Games:0,Kills:0,Deaths:0,Assists:0,Wins:0,Losses:0,Headshots:0,TotalShots:0,TotalLanded:0},
+													swatnums:{Games:0,Kills:0,Deaths:0,Assists:0,Wins:0,Losses:0,Headshots:0,TotalShots:0,TotalLanded:0}
 												 };
 	}
 }
@@ -250,6 +304,8 @@ HaloStats.prototype.parseCarnageDetails = function(match,matchId) {
 			for(var i in player.MedalAwards) {
 				this.players[playerTag].matches[matchId].Medals[player.MedalAwards[i].MedalId] = player.MedalAwards[i].Count;
 			}
+			this.players[playerTag].statQueue.push(matchId);
+			console.log("**** Found new match: "+matchId);
 		}
 	}
 }
@@ -307,6 +363,9 @@ HaloStats.prototype.getNextUrl = function(thisType,func) {
 	}.bind(this));
 };
 
+HaloStats.prototype.setIO = function(io) {
+	this.io = io;
+}
 
 var haloStats = new HaloStats();
 

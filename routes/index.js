@@ -8,6 +8,8 @@ module.exports = function (io) {
 	router.get('/users/:name', function (req, res) {
 	  var players = halo.players;
 	  res.render( 'index', { 
+	  						 stats: halo.stats,
+	  						 thisSeasonId: "career", 
 	  						 tag: req.params.name, 
 	  						 avatar: players[req.params.name].avatar, 
 	  						 swat: players[req.params.name].stats.career.swat, 
@@ -16,7 +18,7 @@ module.exports = function (io) {
 	  						 title: 'Halo SWAT Analyzer (CAREER) - ' + req.params.name, 
 	  						 players: players, 
 	  						 seasonNames: halo.seasonNames,
-	  						 seasons: halo.usedSeasons,
+	  						 seasons: players[req.params.name].usedSeasons,
 	  						 showForm: false 
 	  						});
 	});
@@ -29,6 +31,8 @@ module.exports = function (io) {
 	  }
 	  thisSeason[req.params.season] = "selected";
 	  res.render( 'index', { 
+	  						 stats: halo.stats,
+	  						 thisSeasonId: req.params.season, 
 	  						 thisSeason: thisSeason, 
 	  						 tag: req.params.name, 
 	  						 avatar: players[req.params.name].avatar, 
@@ -38,7 +42,30 @@ module.exports = function (io) {
 	  						 title: 'Halo SWAT Analyzer ('+halo.seasonNames[req.params.season]+') - ' + req.params.name, 
 	  						 players: players, 
 	  						 seasonNames: halo.seasonNames,
-	  						 seasons: halo.usedSeasons,
+	  						 seasons: players[req.params.name].usedSeasons,
+	  						 showForm: false 
+	  						});
+	});
+
+	router.get('/users/:name/:date', function (req, res) {
+	  var players = halo.players;
+	  var thisSeason = {};
+	  for(var s in halo.usedSeasons) {
+	  	thisSeason[s] = "";
+	  }
+	  thisSeason[req.params.season] = "selected";
+	  res.render( 'index', { 
+	  						 stats: halo.stats,
+	  						 thisSeason: thisSeason, 
+	  						 tag: req.params.name, 
+	  						 avatar: players[req.params.name].avatar, 
+	  						 swat: players[req.params.name].stats[req.params.season].swat, 
+	  						 swatnums: players[req.params.name].stats[req.params.season].swatnums, 
+	  						 total: players[req.params.name].stats[req.params.season].total, 
+	  						 title: 'Halo SWAT Analyzer ('+halo.seasonNames[req.params.season]+') - ' + req.params.name, 
+	  						 players: players, 
+	  						 seasonNames: halo.seasonNames,
+	  						 seasons: players[req.params.name].usedSeasons,
 	  						 showForm: false 
 	  						});
 	});
@@ -46,8 +73,6 @@ module.exports = function (io) {
 	router.get('/', function (req, res) {
 	  res.redirect('/users/ILikeBlakGuys');
 	});
-
-	
 
 	router.get('/tweets/:tweetID', function (req, res) {
 	  var tweets = tweetBank.find({tweetID : req.params.tweetID});

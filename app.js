@@ -30,5 +30,6 @@ var server = app.listen(port, function() {
 }); 
 
 var io = socketio.listen(server);
+halo.setIO(io);
 
 app.use('/', urlencodedParser, routes(io));		//	route all requests to our routing module

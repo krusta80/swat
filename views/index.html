@@ -16,33 +16,30 @@
       </select>
       <br>
       
-      <table cellpadding="5">
+      <table border="yes" cellpadding="5" style="font-weight: bold;">
 	      <tr>
-	      	<td></td><td>Games</td><td>Kills</td><td>Deaths</td><td>Assists</td><td>K/D</td>
+			<td nowrap></td>
+	      	{% for stat in stats %}
+	      	  <td nowrap>{{stat.label}}</td>
+	      	{% endfor %}
 	      </tr>
 		  <tr>
 	      	<td>SWAT</td>
-	      	<td align=right>{{swat.Games}}</td>
-	      	<td align=right>{{swat.Kills}}</td>
-	      	<td align=right>{{swat.Deaths}}</td>
-	      	<td align=right>{{swat.Assists}}</td>
-	      	<td align=right>{{swat.KD}}</td>
+	      	{% for stat in stats %}
+	      	  <td align=right><div id="swat{{stat.field}}">{{swat[stat.field]}}</div></td>
+	      	{% endfor %}
 	      </tr>
 		  <tr>
 	      	<td>SWATnums</td>
-	      	<td align=right>{{swatnums.Games}}</td>
-	      	<td align=right>{{swatnums.Kills}}</td>
-	      	<td align=right>{{swatnums.Deaths}}</td>
-	      	<td align=right>{{swatnums.Assists}}</td>
-	      	<td align=right>{{swatnums.KD}}</td>
+	      	{% for stat in stats %}
+	      	  <td align=right><div id="swatnums{{stat.field}}">{{swatnums[stat.field]}}</div></td>
+	      	{% endfor %}
 	      </tr>
 		  <tr>
 	      	<td>TOTAL</td>
-	      	<td align=right>{{total.Games}}</td>
-	      	<td align=right>{{total.Kills}}</td>
-	      	<td align=right>{{total.Deaths}}</td>
-	      	<td align=right>{{total.Assists}}</td>
-	      	<td align=right>{{total.KD}}</td>
+	      	{% for stat in stats %}
+	      	  <td align=right><div id="total{{stat.field}}">{{total[stat.field]}}</div></td>
+	      	{% endfor %}
 	      </tr>
 	</table>
     </div>

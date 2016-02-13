@@ -7,7 +7,8 @@ var routes = require('./routes/');
 var socketio = require('socket.io');
 var halo = require('./halo');
 
-var port = 3000;
+var port = process.argv[2]; 
+console.log(port);
 var indexView = "";
 
 // create application/json parser

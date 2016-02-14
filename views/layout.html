@@ -79,6 +79,7 @@
   // Because the socket.io server is being run on the same server as your 
   // Express instance, you can connect() without any arguments.
   var socket = io.connect();
+  
   socket.on('connect', function(){
     console.log('connected to server via WebSockets!');
   });
@@ -91,26 +92,29 @@
       {
         for(var season in tweet[i]) 
         {          
-          if(season === '{{thisSeasonId}}') 
+          if(season === {{thisSeasonId}}) 
           {
-            console.log(tweet[i][season]);
+            //console.log(tweet[i][season]);
             for(var gameType in tweet[i][season]) 
             {
               
               for(var field in tweet[i][season][gameType]) 
               {
-                console.log(gameType+field);
-                if(Number(document.getElementById(gameType+field).innerText) < tweet[i][season][gameType][field])
-                {
-                  window.location.reload();
-                  //document.getElementById(gameType+field).innerText = tweet[i][season][gameType][field];
-                }   
+                //console.log(gameType+field+" -> "+tweet[i][season][gameType][field]);
+                //if(document.getElementById(gameType+field) && Number(document.getElementById(gameType+field).innerText) < tweet[i][season][gameType][field])
+                //{
+                  document.getElementById(gameType+field).innerText = tweet[i][season][gameType][field];
+                //}   
               }
             }
           }
         }
       }
     }
+  });
+
+  socket.on('season_update', function (tweet) { 
+    window.location.reload();
   }); 
 </script>
 

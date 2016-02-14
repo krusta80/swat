@@ -6,31 +6,38 @@ var bodyParser = require('body-parser');
 var routes = require('./routes/');	
 var socketio = require('socket.io');
 var halo = require('./halo');
+var io;
 
-var port = process.argv[2]; 
-console.log(port);
-var indexView = "";
+var startServer = function() {
+	if(halo.isReady) {
+		var port = process.argv[2]; 
+		console.log("                               Seasons loaded...starting server on port "+port+"!")
+		var indexView = "";
 
-// create application/json parser
-var jsonParser = bodyParser.json()
+		// create application/json parser
+		var jsonParser = bodyParser.json()
 
-// create application/x-www-form-urlencoded parser
-var urlencodedParser = bodyParser.urlencoded({ extended: false })
+		// create application/x-www-form-urlencoded parser
+		var urlencodedParser = bodyParser.urlencoded({ extended: false })
 
-app.engine('html', swig.renderFile);
-app.set('view engine', 'html');
-app.set('views', __dirname + '/views');
-swig.setDefaults({ cache: false });
+		app.engine('html', swig.renderFile);
+		app.set('view engine', 'html');
+		app.set('views', __dirname + '/views');
+		swig.setDefaults({ cache: false });
 
-app.use(express.static('public'));
+		app.use(express.static('public'));
 
-app.use(morgan('combined'));
+		app.use(morgan('combined'));
 
-var server = app.listen(port, function() {
-	console.log("Twitter is running on port "+port);
-}); 
+		var server = app.listen(port, function() {}); 
 
-var io = socketio.listen(server);
-halo.setIO(io);
+		io = socketio.listen(server);
+		halo.setIO(io);
+		app.use('/', urlencodedParser, routes(io));		//	route all requests to our routing module		
+	}
+	else {
+		setTimeout(startServer,3000);
+	}
+};
 
-app.use('/', urlencodedParser, routes(io));		//	route all requests to our routing module
+startServer();
